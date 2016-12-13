@@ -1,0 +1,192 @@
+﻿@{
+    ViewBag.Title = "SignalR Sample";
+}
+
+<div>
+    <h3>Running <span id="lblJobsCount">0</span> jobs</h3>
+    <p class="lead">
+        <div class="table-responsive" style="height: 300px; overflow-y: scroll;">
+            <table class="table" id="tblJobs" >
+                <thead>
+                    <tr>
+                        <th colspan="3"></th>
+                    </tr>
+                    <tr>
+                        <th>Job Id</th>
+                        <th>Job Type</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </p>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>Fire-and-forget</h2>
+        <p>
+            Fire-and-forget jobs are executed only once and almost immediately after creation.
+        </p>
+        <p>
+            <button id="btnCountTo10" class="btn btn-default">Count to 10</button>
+            <button id="btnCountTo20" class="btn btn-default">Count to 20</button>
+            <button id="btnCountToRandom" class="btn btn-default">Count to random</button>
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Delayed jobs</h2>
+        <p>Delayed jobs are executed only once too, but not immediately, after a certain time interval.</p>
+        <p>
+            <button id="btnCountTo10In5" class="btn btn-default">Count to 10 in 5</button>
+            <button id="btnCountTo10In5ThanRandom" class="btn btn-default">Count to 10 in 5 than random</button>
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Continuations</h2>
+        <p>Continuations are executed when its parent job has been finished.</p>
+        <p>
+            <button id="btnCountMultiple" class="btn btn-default">Count to 10, than 20, than random</button>
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Recurring</h2>
+        <p>Recurring jobs fire many times on the specified CRON schedule. Below examples schedule jobs to check every minute.</p>
+        <p>
+            <button id="btnCheck20" class="btn btn-default">Check for 20</button>
+            <button id="btnCheck42" class="btn btn-default">Check for 42</button>
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Heavy load</h2>
+        <p>Schedule 100 dependent jobs that count to 10, than to 20 than to random.</p>
+        <p>
+            <button id="btnHeavyLoad" class="btn btn-default">Heavy Load</button>
+        </p>
+    </div>
+</div>
+
+@section scripts
+{
+    <script>
+        function countTo10() {
+            $.post("@Url.Action("CountTo10")");
+        }
+        function countTo20() {
+            $.post("@Url.Action("CountTo20")");
+        }
+        function countToRandom() {
+            $.post("@Url.Action("CountToRandom")");
+        }
+        function countTo10Then20ThenRandom() {
+            $.post("@Url.Action("CountTo10Then20ThenRandom")");
+        }
+        function heavyLoad() {
+            $.post("@Url.Action("Count100Times")");
+        }
+        function check20() {
+            $.post("@Url.Action("Check20")");
+        }
+        function check42() {
+            $.post("@Url.Action("Check42")");
+        }
+        function countTo10In5() {
+            $.post("@Url.Action("CountTo10In5")");
+        }
+        function countTo10In5ThanRandom() {
+            $.post("@Url.Action("CountTo10In5ThanRandom")");
+        }
+
+        var jobsCount = 0;
+        function makeRowHtml(jobStatus) {
+            var rowHtml = '<tr data-notification="' + jobStatus.Id + '">' +
+                '<td>' + jobStatus.Id + '</td>' +
+                '<td>' + jobStatus.Name + '</td>' +
+                '<td>' +
+                '<div class="progress progress-striped active">' +
+                '<div class="bar blue" style="width: ' + jobStatus.Progress.toFixed(1) + '%;">' + jobStatus.Progress.toFixed(1) + '%</div>' +
+                '</div>' +
+                '</td>' +
+                '</tr>';
+            return rowHtml;
+        };
+
+        $(function () {
+            $("#btnCountTo10").click(function () {
+                countTo10();
+            });
+            $("#btnCountTo20").click(function () {
+                countTo20();
+            });
+            $("#btnCountToRandom").click(function () {
+                countToRandom();
+            });
+            $("#btnCountMultiple").click(function () {
+                countTo10Then20ThenRandom();
+            });
+            $("#btnHeavyLoad").click(function () {
+                heavyLoad();
+            });
+            $("#btnCheck20").click(function () {
+                check20();
+            });
+            $("#btnCheck42").click(function () {
+                check42();
+            });
+            $("#btnCountTo10In5").click(function () {
+                countTo10In5();
+            });
+            $("#btnCountTo10In5ThanRandom").click(function () {
+                countTo10In5ThanRandom();
+            });
+
+            var proccessingHub = $.connection.processingJobsHub; // the generated client-side hub proxy
+
+            proccessingHub.client.updateJobStatus = function (jobStatus) {
+
+                var row = makeRowHtml(jobStatus);
+                var foundRow = $("#tblJobs tbody tr[data-notification=" + jobStatus.Id + "]");
+                if (foundRow.length !== 0) {
+                    foundRow.replaceWith(row);
+                } else {
+                    jobsCount++;
+                    $("#lblJobsCount").text(jobsCount);
+                    $("#tblJobs tbody").prepend(row);
+                }
+            };
+
+            proccessingHub.client.updateJobComplete = function (jobStatus) {
+                var foundRow = $("#tblJobs tbody tr[data-notification=" + jobStatus.Id + "]");
+                if (foundRow.length !== 0) {
+                    foundRow.remove();
+                    jobsCount--;
+                    $("#lblJobsCount").text(jobsCount);
+                }
+            };
+
+            proccessingHub.client.foundJobCount = function (jobStatus) {
+                alert(jobStatus.Name);
+            };
+
+            var init = function () {
+                proccessingHub.server.getAllStatuses().done(function (jobs) {
+
+                    jobsCount = jobs.length;
+                    $("#lblJobsCount").text(jobsCount);
+                    $("#tblJobs tbody tr").remove();
+
+                    $.each(jobs, function () {
+                        var row = makeRowHtml(this);
+                        $("#tblJobs tbody").prepend(row);
+                    });
+                });
+            }
+
+            // Start the connection
+            $.connection.hub.start().done(init);
+        });
+    </script>
+
+}

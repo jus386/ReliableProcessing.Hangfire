@@ -1,0 +1,52 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="jumbotron">
+    <h1>Hangfire Tasks</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>Fire-and-forget</h2>
+        <p>
+            Fire-and-forget jobs are executed only once and almost immediately after creation.
+        </p>
+        <p>
+            @using (Html.BeginForm("FireAndForget", "Home"))
+            {
+                <button type="submit" class="btn btn-default">Fire and Forget</button>
+            }
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Delayed jobs</h2>
+        <p>Delayed jobs are executed only once too, but not immediately, after a certain time interval.</p>
+        <p>
+            @using (Html.BeginForm("FireAfter10", "Home"))
+            {
+                <button type="submit" class="btn btn-default">Fire after 10 seconds</button>
+            }
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Continuations</h2>
+        <p>Continuations are executed when its parent job has been finished.</p>
+        <p>
+            @using (Html.BeginForm("FireDependent", "Home"))
+            {
+                <button type="submit" class="btn btn-default">Fire dependent jobs</button>
+            }
+        </p>
+    </div>
+    <div class="col-md-4">
+        <h2>Recurring</h2>
+        <p>Recurring jobs fire many times on the specified CRON schedule. Below examples schedule jobs to check every minute.</p>
+        <p>
+            @using (Html.BeginForm("AddRemoveRecurring", "Home"))
+            {
+                <button type="submit" class="btn btn-default">Add Recurring</button>
+            }
+        </p>
+    </div>
+</div>
